@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
-
 	"log"
 	"net/http"
 )
@@ -30,7 +29,7 @@ func (s *socket) SetBuffer(read, write int) {
 		s.registerClient = make(map[string]clientData)
 	}
 }
-func (s *socket) Register(client string, w http.ResponseWriter, r *http.Request,ReaderFunction func(msg []byte)) (err error) {
+func (s *socket) Register(Channels string, w http.ResponseWriter, r *http.Request,ReaderFunction func(msg []byte)) (err error) {
 	s.connectionClient.CheckOrigin = func(r *http.Request) bool {
 		return true
 	}
@@ -41,18 +40,18 @@ func (s *socket) Register(client string, w http.ResponseWriter, r *http.Request,
 	}
 	clientId := uuid.NewV4().String()
 	logMsg := "New Client Connected!"
-	if _, ok := s.registerClient[client]; ok {
+	if _, ok := s.registerClient[Channels]; ok {
 		logMsg = "client connected !"
 	}
-	if s.registerClient[client].Indentifier == nil {
+	if s.registerClient[Channels].Indentifier == nil {
 		var NewClient clientData
 		NewClient.Indentifier = make(map[string]*websocket.Conn)
 		NewClient.Indentifier[clientId] = con
-		s.registerClient[client] = NewClient
+		s.registerClient[Channels] = NewClient
 	} else {
-		s.registerClient[client].Indentifier[clientId] = con
+		s.registerClient[Channels].Indentifier[clientId] = con
 	}
-	go s.clientConnection(client, clientId, con,ReaderFunction)
+	go s.clientConnection(Channels, clientId, con,ReaderFunction)
 	log.Println(logMsg)
 	return
 }

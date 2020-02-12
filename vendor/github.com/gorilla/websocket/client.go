@@ -278,7 +278,7 @@ func (d *Dialer) DialContext(ctx context.Context, urlStr string, requestHeader h
 			if err != nil {
 				return nil, nil, err
 			}
-			netDial = Dial
+			netDial = dialer.Dial
 		}
 	}
 
