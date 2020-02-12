@@ -10,7 +10,7 @@ https://github.com/satori/go.uuid
 ```
 ### Installation
 ```
-go get github.com/vincentius93/govalidator
+go get github.com/vincentius93/gosocket
 ```
 
 ### Features
