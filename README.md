@@ -33,10 +33,12 @@ if err != nil {
 #### User connection with received message function handler
 This package also support to callback a function when receive new message from client
 ```
-GoSocket.Register("Channel1",httpResponseWriter,httpRequest, func(msg []byte) {
-            // do some action here
-            fmt.Println(string(msg))
+ClientConnection,err := gosocket.GoSocket.Register("Channel1",w,r, func(msg []byte, socket gosocket.CallBack) {
+            //do some action here 
 	})
+	if err != nil {
+		//do some error handling here
+	}
 ```
 
 #### Publish Message
