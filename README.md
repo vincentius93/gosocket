@@ -15,18 +15,23 @@ go get github.com/vincentius93/gosocket
 
 ### Features
 
-- Client allows to disconnect server connection
+- Client allow to disconnect server connection
 - Manage client connection 
 - Send Broadcast to all connected client
 - Publish Message to all connected client on channels
+- Send Message to specific client
 
 ## Usage
 #### User connection
 ```
-GoSocket.Register("Channel1",httpResponseWriter,httpRequest,nil)
+_,err := gosocket.GoSocket.Register("Channel1",w,r, nil)
+if err != nil {
+    // do some error handling here
+}
 ```
 
 #### User connection with received message function handler
+This package also support to callback a function when receive new message from client
 ```
 GoSocket.Register("Channel1",httpResponseWriter,httpRequest, func(msg []byte) {
             // do some action here
@@ -51,4 +56,13 @@ GoSocket allow client to disconnect server connection by simply send this comman
 client side
 ````
 socket.send("diconnect")
+````
+
+#### Send to specific client
+This package also support for server to send message to specific client
+````
+err := gosocket.SendToClient(ClientConnection,[]byte(val))
+if err != nil {
+    // do some error handling here
+}
 ````

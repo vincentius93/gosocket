@@ -15,6 +15,7 @@ type socket struct {
 type clientData struct {
 	Indentifier map[string]*websocket.Conn
 }
+type ClientConnection = *websocket.Conn
 
 const (
 	DISCONNECT = "disconnect"
@@ -29,14 +30,14 @@ func (s *socket) SetBuffer(read, write int) {
 		s.registerClient = make(map[string]clientData)
 	}
 }
-func (s *socket) Register(Channels string, w http.ResponseWriter, r *http.Request,ReaderFunction func(msg []byte)) (err error) {
+func (s *socket) Register(Channels string, w http.ResponseWriter, r *http.Request,ReaderFunction func(msg []byte,ClientCon ClientConnection)) (clientConnection ClientConnection,err error) {
 	s.connectionClient.CheckOrigin = func(r *http.Request) bool {
 		return true
 	}
 	con, err := s.connectionClient.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Client Connection Failed : ", err.Error())
-		return
+		return nil,err
 	}
 	clientId := uuid.NewV4().String()
 	logMsg := "New Client Connected!"
@@ -51,12 +52,13 @@ func (s *socket) Register(Channels string, w http.ResponseWriter, r *http.Reques
 	} else {
 		s.registerClient[Channels].Indentifier[clientId] = con
 	}
+
 	go s.clientConnection(Channels, clientId, con,ReaderFunction)
 	log.Println(logMsg)
-	return
+	return con,nil
 }
-func (s *socket) PublishMsg(client string, msg [] byte) {
-	for _, con := range s.registerClient[client].Indentifier {
+func (s *socket) PublishMsg(Channels string, msg [] byte) {
+	for _, con := range s.registerClient[Channels].Indentifier {
 		err := con.WriteMessage(1, msg)
 		if err != nil {
 			log.Println("Cannot send to client : ", err.Error())
@@ -70,30 +72,30 @@ func init() {
 	GoSocket.SetBuffer(1024, 1024)
 }
 
-func (s *socket) clientConnection(client, clientId string, clientCon *websocket.Conn,ReaderFunction func(asd[]byte)) {
+func (s *socket) clientConnection(Channels, clientId string, clientCon *websocket.Conn,ReaderFunction func(msg []byte,clientConnection ClientConnection)) {
 	for {
 		_, msg, err := clientCon.ReadMessage()
 		if err != nil {
 			log.Println(err.Error(), " : Failed to read Msg from client")
-			s.disconnectClient(client, clientId)
+			s.disconnectClient(Channels, clientId)
 			break
 		}
 		if ReaderFunction != nil {
-			go ReaderFunction(msg)
+			go ReaderFunction(msg,clientCon)
 		}
 		if string(msg) == DISCONNECT {
-			s.disconnectClient(client, clientId)
+			s.disconnectClient(Channels, clientId)
 		}
 	}
 }
 
-func (s *socket) disconnectClient(client, clientId string) {
-	if _, ok := s.registerClient[client]; ok {
-		if _, ok := s.registerClient[client].Indentifier[clientId]; ok {
-			s.registerClient[client].Indentifier[clientId].Close()
-			delete(s.registerClient[client].Indentifier, clientId)
-			if len(s.registerClient[client].Indentifier) == 0 {
-				delete(s.registerClient, client)
+func (s *socket) disconnectClient(Channels, clientId string) {
+	if _, ok := s.registerClient[Channels]; ok {
+		if _, ok := s.registerClient[Channels].Indentifier[clientId]; ok {
+			s.registerClient[Channels].Indentifier[clientId].Close()
+			delete(s.registerClient[Channels].Indentifier, clientId)
+			if len(s.registerClient[Channels].Indentifier) == 0 {
+				delete(s.registerClient, Channels)
 			}
 			log.Println("User disconnected!")
 		}
@@ -111,5 +113,13 @@ func (s *socket) Broadcast(msg []byte) (err error) {
 		}
 		return
 	}
-	return errors.New("no client connected!")
+	return errors.New("no channels !")
+}
+
+func SendToClient(clientConnection ClientConnection,msg []byte)(err error){
+	err = clientConnection.WriteMessage(1, msg)
+	if err != nil {
+		log.Println("Cannot send to client : ", err.Error())
+	}
+	return
 }
