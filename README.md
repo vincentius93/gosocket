@@ -10,7 +10,7 @@ https://github.com/satori/go.uuid
 ```
 ### Installation
 ```
-go get github.com/vincentius93/gosocke
+go get github.com/vincentius93/gosocket
 ```
 
 ### Features
@@ -43,7 +43,7 @@ GoSocket.PublishMsg("Channel1",[]byte("hello world"))
 #### Broadcast Message
 This function allow server to broadcast message to all connected client on all channels
 ````
-GoSocket.Broadcast([]byte("Hello Worlds"))
+GoSocket.Broadcast([]byte("Hello World"))
 ````
 
 #### Client disconnect server connection

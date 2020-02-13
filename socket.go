@@ -105,8 +105,7 @@ func (s *socket) Broadcast(msg []byte) (err error) {
 			for _, con := range value.Indentifier {
 				err = con.WriteMessage(1, msg)
 				if err != nil {
-					break
-					return
+					log.Println("Cannot send to client : ", err.Error())
 				}
 			}
 		}
