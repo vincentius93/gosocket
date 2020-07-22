@@ -20,6 +20,7 @@ go get github.com/vincentius93/gosocket
 - Send Broadcast to all connected client
 - Publish Message to all connected client on channels
 - Send Message to specific client
+- Server Allow to disconnect all client from specific channel
 
 ## Usage
 #### User connection
@@ -58,6 +59,15 @@ GoSocket allow client to disconnect server connection by simply send this comman
 client side
 ````
 socket.send("diconnect")
+````
+
+#### Server disconnect all client connection from channel
+GoSocket allow server to disconnect all client connection from channel with this command
+````
+err := gosocket.DisconnectChannel(channel)
+if err != nil {
+    // do some error handling here
+}
 ````
 
 #### Send to specific client
