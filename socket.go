@@ -6,6 +6,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"log"
 	"net/http"
+	"time"
 )
 
 type socket struct {
@@ -92,11 +93,13 @@ func (s *socket) clientConnection(Channels, clientId string, clientCon *websocke
 		}
 		if string(msg) == DISCONNECT {
 			s.disconnectClient(Channels, clientId)
+			break
 		}
 	}
 }
 
 func (s *socket) disconnectClient(Channels, clientId string) {
+	time.Sleep(100)
 	if _, ok := s.registerClient[Channels]; ok {
 		if _, ok := s.registerClient[Channels].Indentifier[clientId]; ok {
 			s.registerClient[Channels].Indentifier[clientId].Close()
@@ -127,7 +130,6 @@ func (s *socket)DisconnectChannel(Channel string)(err error){
 		for ClientId,_ := range s.registerClient[Channel].Indentifier{
 			s.disconnectClient(Channel,ClientId)
 		}
-		delete(s.registerClient,Channel)
 		return
 	}
 	err = errors.New("No Active Channel!")
