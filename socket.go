@@ -6,12 +6,13 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"log"
 	"net/http"
-	"time"
+	"sync"
 )
 
 type socket struct {
 	connectionClient websocket.Upgrader
 	registerClient   map[string]clientData
+	lockingReWrites  *sync.RWMutex
 }
 type clientData struct {
 	Indentifier map[string]*websocket.Conn
@@ -50,6 +51,7 @@ func (s *socket) Register(Channels string, w http.ResponseWriter, r *http.Reques
 	if _, ok := s.registerClient[Channels]; ok {
 		logMsg = "client connected !"
 	}
+	s.lockingReWrites.Lock()
 	if s.registerClient[Channels].Indentifier == nil {
 		var NewClient clientData
 		NewClient.Indentifier = make(map[string]*websocket.Conn)
@@ -58,15 +60,18 @@ func (s *socket) Register(Channels string, w http.ResponseWriter, r *http.Reques
 	} else {
 		s.registerClient[Channels].Indentifier[clientId] = con
 	}
+	s.lockingReWrites.Unlock()
 	go s.clientConnection(Channels, clientId, con, ReaderFunction)
 	log.Println(logMsg)
 	return con, nil
 }
 func (s *socket) PublishMsg(Channels string, msg [] byte) {
+	s.lockingReWrites.Lock()
+	defer s.lockingReWrites.Unlock()
 	for _, con := range s.registerClient[Channels].Indentifier {
 		err := con.WriteMessage(1, msg)
 		if err != nil {
-			err = errors.New("Cannot send to client : "+ err.Error())
+			err = errors.New("Cannot send to client : " + err.Error())
 		}
 	}
 }
@@ -74,13 +79,14 @@ func (s *socket) PublishMsg(Channels string, msg [] byte) {
 func init() {
 	GoSocket.registerClient = make(map[string]clientData)
 	GoSocket.SetBuffer(1024, 1024)
+	GoSocket.lockingReWrites = &sync.RWMutex{}
 }
 
 func (s *socket) clientConnection(Channels, clientId string, clientCon *websocket.Conn, ReaderFunction func(msg []byte, socket CallBack)) {
 	for {
 		_, msg, err := clientCon.ReadMessage()
 		if err != nil {
-			err = errors.New(err.Error()+ " : Failed to read Msg from client")
+			err = errors.New(err.Error() + " : Failed to read Msg from client")
 			s.disconnectClient(Channels, clientId)
 			break
 		}
@@ -99,7 +105,8 @@ func (s *socket) clientConnection(Channels, clientId string, clientCon *websocke
 }
 
 func (s *socket) disconnectClient(Channels, clientId string) {
-	time.Sleep(100)
+	s.lockingReWrites.Lock()
+	defer s.lockingReWrites.Unlock()
 	if _, ok := s.registerClient[Channels]; ok {
 		if _, ok := s.registerClient[Channels].Indentifier[clientId]; ok {
 			s.registerClient[Channels].Indentifier[clientId].Close()
@@ -112,12 +119,14 @@ func (s *socket) disconnectClient(Channels, clientId string) {
 	}
 }
 func (s *socket) Broadcast(msg []byte) (err error) {
+	s.lockingReWrites.RLock()
+	defer s.lockingReWrites.RUnlock()
 	if s.registerClient != nil {
 		for _, value := range s.registerClient {
 			for _, con := range value.Indentifier {
 				err = con.WriteMessage(1, msg)
 				if err != nil {
-					err = errors.New("Cannot send to client : "+ err.Error())
+					err = errors.New("Cannot send to client : " + err.Error())
 				}
 			}
 		}
@@ -125,10 +134,10 @@ func (s *socket) Broadcast(msg []byte) (err error) {
 	}
 	return errors.New("no channels !")
 }
-func (s *socket)DisconnectChannel(Channel string)(err error){
+func (s *socket) DisconnectChannel(Channel string) (err error) {
 	if _, ok := s.registerClient[Channel]; ok {
-		for ClientId,_ := range s.registerClient[Channel].Indentifier{
-			s.disconnectClient(Channel,ClientId)
+		for ClientId, _ := range s.registerClient[Channel].Indentifier {
+			s.disconnectClient(Channel, ClientId)
 		}
 		return
 	}
@@ -139,15 +148,15 @@ func (s *socket)DisconnectChannel(Channel string)(err error){
 func SendToClient(clientConnection ClientConnection, msg []byte) (err error) {
 	err = clientConnection.WriteMessage(1, msg)
 	if err != nil {
-		err = errors.New("Cannot send to client : "+ err.Error())
+		err = errors.New("Cannot send to client : " + err.Error())
 	}
 	return
 }
 
-func(c *CallBack)SendToClient(msg []byte)(err error){
+func (c *CallBack) SendToClient(msg []byte) (err error) {
 	err = c.currentConnection.WriteMessage(1, msg)
 	if err != nil {
-		err = errors.New("Cannot send to client : "+ err.Error())
+		err = errors.New("Cannot send to client : " + err.Error())
 	}
 	return
 }
